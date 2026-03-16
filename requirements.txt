@@ -2,8 +2,8 @@ streamlit
 pandas
 numpy
 scikit-learn
-networkx
-matplotlib
 xgboost
 shap
+plotly
 networkx
+pyvis
