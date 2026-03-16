@@ -218,60 +218,72 @@ if st.button("Predict Cardiovascular Risk"):
 # PYVIS NETWORK GRAPH
 # --------------------------
 
-    st.subheader("Risk Factor Network")
+st.subheader("Risk Factor Network")
 
-    G = nx.DiGraph()
+G = nx.DiGraph()
 
-    edges = [
-        ("Smoking","Blood Pressure"),
-        ("Blood Pressure","Heart Disease"),
-        ("Cholesterol","Heart Disease"),
-        ("Glucose","Heart Disease"),
-        ("Alcohol","Heart Disease"),
-        ("Physical Activity","BMI"),
-        ("BMI","Blood Pressure")
-    ]
+edges = [
+    ("Smoking","Blood Pressure"),
+    ("Blood Pressure","Heart Disease"),
+    ("Cholesterol","Heart Disease"),
+    ("Glucose","Heart Disease"),
+    ("Alcohol","Heart Disease"),
+    ("Physical Activity","BMI"),
+    ("BMI","Blood Pressure")
+]
 
-    G.add_edges_from(edges)
+G.add_edges_from(edges)
 
-    net = Network(height="500px", width="100%", directed=True)
+# Set font color globally
+net = Network(
+    height="500px",
+    width="100%",
+    directed=True,
+    bgcolor="#0E1117",
+    font_color="white"
+)
 
-    for node in G.nodes():
+for node in G.nodes():
 
-        color="skyblue"
+    color = "skyblue"
 
-        if node=="Smoking" and smoke==1:
-            color="red"
+    if node=="Smoking" and smoke==1:
+        color="red"
 
-        elif node=="Alcohol" and alco==1:
-            color="orange"
+    elif node=="Alcohol" and alco==1:
+        color="orange"
 
-        elif node=="Cholesterol" and cholesterol>1:
-            color="red"
+    elif node=="Cholesterol" and cholesterol>1:
+        color="red"
 
-        elif node=="Glucose" and gluc>1:
-            color="orange"
+    elif node=="Glucose" and gluc>1:
+        color="orange"
 
-        elif node=="Blood Pressure" and ap_hi>140:
-            color="red"
+    elif node=="Blood Pressure" and ap_hi>140:
+        color="red"
 
-        elif node=="BMI" and BMI>30:
-            color="orange"
+    elif node=="BMI" and BMI>30:
+        color="orange"
 
-        elif node=="Physical Activity" and active==1:
-            color="green"
+    elif node=="Physical Activity" and active==1:
+        color="green"
 
-        net.add_node(node,label=node,color=color)
+    net.add_node(
+        node,
+        label=node,
+        color=color,
+        font={"size":20,"color":"white"}   # 👈 FIX
+    )
 
-    for edge in G.edges():
-        net.add_edge(edge[0],edge[1])
+for edge in G.edges():
+    net.add_edge(edge[0],edge[1], arrows="to")
 
-    net.save_graph("graph.html")
+net.save_graph("graph.html")
 
-    HtmlFile=open("graph.html",'r',encoding='utf-8')
-    source_code=HtmlFile.read()
+HtmlFile=open("graph.html",'r',encoding='utf-8')
+source_code=HtmlFile.read()
 
-    html(source_code,height=500)
+html(source_code,height=500)
 
 # --------------------------
 # DATASET INSIGHTS
