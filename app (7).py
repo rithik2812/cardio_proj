@@ -20,7 +20,6 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 from xgboost import XGBClassifier
 
 st.set_page_config(page_title="CardioGraph AI", layout="wide")
-
 st.title("CardioGraph AI")
 st.subheader("Explainable Cardiovascular Risk Prediction System")
 
@@ -33,7 +32,7 @@ def load_data():
 
     df = pd.read_csv("cardio_train.csv", sep=";")
 
-    df["BMI"] = df["weight"] / ((df["height"]/100)**2)
+    df["BMI"] = df["weight"] / ((df["height"] / 100) ** 2)
 
     return df
 
@@ -59,19 +58,28 @@ def train_model():
 
     X_scaled = scaler.fit_transform(X)
 
-    X_train,X_test,y_train,y_test = train_test_split(
-        X_scaled,y,test_size=0.2,random_state=42
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_scaled,
+        y,
+        test_size=0.2,
+        stratify=y,
+        random_state=42
     )
 
-    model = XGBClassifier(eval_metric="logloss")
+    model = XGBClassifier(
+        eval_metric="logloss",
+        n_estimators=200,
+        max_depth=5,
+        learning_rate=0.05
+    )
 
-    model.fit(X_train,y_train)
+    model.fit(X_train, y_train)
 
     preds = model.predict(X_test)
     probs = model.predict_proba(X_test)[:,1]
 
-    acc = accuracy_score(y_test,preds)
-    auc = roc_auc_score(y_test,probs)
+    acc = accuracy_score(y_test, preds)
+    auc = roc_auc_score(y_test, probs)
 
     explainer = shap.TreeExplainer(model)
 
@@ -87,12 +95,12 @@ st.write("Model ROC-AUC:", round(auc,3))
 # USER INPUT
 # --------------------------
 
-st.sidebar.header("Patient Profile")
+st.sidebar.header("Patient Health Profile")
 
 age = st.sidebar.slider("Age",20,80,50)
 
 gender_option = st.sidebar.selectbox("Gender",["Female","Male"])
-gender = 1 if gender_option=="Female" else 2
+gender = 1 if gender_option == "Female" else 2
 
 height = st.sidebar.slider("Height (cm)",140,200,170)
 weight = st.sidebar.slider("Weight (kg)",40,150,70)
@@ -101,21 +109,18 @@ ap_hi = st.sidebar.slider("Systolic Blood Pressure",90,200,120)
 ap_lo = st.sidebar.slider("Diastolic Blood Pressure",60,140,80)
 
 chol_map = {"Normal":1,"Above Normal":2,"Well Above Normal":3}
-chol_label = st.sidebar.selectbox("Cholesterol Level",list(chol_map.keys()))
-cholesterol = chol_map[chol_label]
+cholesterol = chol_map[
+    st.sidebar.selectbox("Cholesterol Level",list(chol_map.keys()))
+]
 
 gluc_map = {"Normal":1,"Above Normal":2,"Well Above Normal":3}
-gluc_label = st.sidebar.selectbox("Glucose Level",list(gluc_map.keys()))
-gluc = gluc_map[gluc_label]
+gluc = gluc_map[
+    st.sidebar.selectbox("Glucose Level",list(gluc_map.keys()))
+]
 
-smoke_option = st.sidebar.selectbox("Smoking",["No","Yes"])
-smoke = 1 if smoke_option=="Yes" else 0
-
-alco_option = st.sidebar.selectbox("Alcohol Consumption",["No","Yes"])
-alco = 1 if alco_option=="Yes" else 0
-
-activity_option = st.sidebar.selectbox("Physical Activity",["No","Yes"])
-active = 1 if activity_option=="Yes" else 0
+smoke = 1 if st.sidebar.selectbox("Smoking",["No","Yes"])=="Yes" else 0
+alco = 1 if st.sidebar.selectbox("Alcohol Consumption",["No","Yes"])=="Yes" else 0
+active = 1 if st.sidebar.selectbox("Regular Physical Activity",["No","Yes"])=="Yes" else 0
 
 BMI = weight / ((height/100)**2)
 
@@ -134,7 +139,7 @@ if st.button("Predict Cardiovascular Risk"):
 
     st.header("Risk Prediction")
 
-    st.metric("Estimated Risk", f"{prob*100:.2f}%")
+    st.metric("Estimated Cardiovascular Risk", f"{prob*100:.2f}%")
 
     if prob < 0.3:
         st.success("Low Cardiovascular Risk")
@@ -147,7 +152,7 @@ if st.button("Predict Cardiovascular Risk"):
 # SHAP EXPLANATION
 # --------------------------
 
-    st.subheader("AI Explanation (What influenced the prediction?)")
+    st.subheader("AI Explanation: What influenced this prediction?")
 
     shap_values = explainer.shap_values(user_scaled)
 
@@ -168,7 +173,6 @@ if st.button("Predict Cardiovascular Risk"):
     st.subheader("Suggested Lifestyle Improvements")
 
     impact = dict(zip(features, shap_contrib))
-
     sorted_features = sorted(impact.items(), key=lambda x: x[1], reverse=True)
 
     suggestions = []
@@ -189,7 +193,10 @@ if st.button("Predict Cardiovascular Risk"):
             sim[0][9] = 1
 
         elif feature == "cholesterol" and cholesterol > 1:
-            suggestions.append("Lower cholesterol through diet")
+            suggestions.append("Improve cholesterol through diet")
+
+        elif feature == "alco" and alco == 1:
+            suggestions.append("Reduce alcohol consumption")
 
         if len(suggestions) == 3:
             break
@@ -198,7 +205,6 @@ if st.button("Predict Cardiovascular Risk"):
         st.write("•", s)
 
     sim_scaled = scaler.transform(sim)
-
     new_prob = model.predict_proba(sim_scaled)[0][1]
 
     st.write("New Predicted Risk:", round(new_prob*100,2), "%")
@@ -213,6 +219,7 @@ if st.button("Predict Cardiovascular Risk"):
 
     edges = [
         ("Smoking","Heart Disease"),
+        ("Alcohol","Heart Disease"),
         ("Cholesterol","Heart Disease"),
         ("Blood Pressure","Heart Disease"),
         ("Glucose","Heart Disease"),
@@ -228,6 +235,9 @@ if st.button("Predict Cardiovascular Risk"):
 
         if node=="Smoking" and smoke==1:
             node_colors.append("red")
+
+        elif node=="Alcohol" and alco==1:
+            node_colors.append("orange")
 
         elif node=="BMI" and BMI>30:
             node_colors.append("orange")
@@ -246,7 +256,7 @@ if st.button("Predict Cardiovascular Risk"):
         G,
         pos,
         with_labels=True,
-        node_size=2500,
+        node_size=2600,
         node_color=node_colors,
         arrows=True
     )
@@ -254,10 +264,10 @@ if st.button("Predict Cardiovascular Risk"):
     st.pyplot(fig2)
 
 # --------------------------
-# DATASET INSIGHT
+# DATASET INSIGHTS
 # --------------------------
 
 st.subheader("Dataset Overview")
 
 st.write("Total Patients:", len(df))
-st.write("Disease Rate:", round(df["cardio"].mean()*100,2), "%")
+st.write("Cardiovascular Disease Rate:", round(df["cardio"].mean()*100,2), "%")
