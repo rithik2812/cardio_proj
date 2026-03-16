@@ -21,7 +21,7 @@ from xgboost import XGBClassifier
 
 st.set_page_config(page_title="CardioGraph AI", layout="wide")
 
-st.title("❤️ CardioGraph AI")
+st.title("CardioGraph AI")
 st.subheader("Explainable Cardiovascular Risk Prediction System")
 
 # --------------------------
