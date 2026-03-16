@@ -20,6 +20,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score
 from xgboost import XGBClassifier
 
 st.set_page_config(page_title="CardioGraph AI", layout="wide")
+
 st.title("CardioGraph AI")
 st.subheader("Explainable Cardiovascular Risk Prediction System")
 
@@ -29,13 +30,9 @@ st.subheader("Explainable Cardiovascular Risk Prediction System")
 
 @st.cache_data
 def load_data():
-
     df = pd.read_csv("cardio_train.csv", sep=";")
-
-    df["BMI"] = df["weight"] / ((df["height"] / 100) ** 2)
-
+    df["BMI"] = df["weight"] / ((df["height"]/100)**2)
     return df
-
 
 df = load_data()
 
@@ -85,7 +82,6 @@ def train_model():
 
     return model, scaler, acc, auc, explainer
 
-
 model, scaler, acc, auc, explainer = train_model()
 
 st.write("Model Accuracy:", round(acc,3))
@@ -100,7 +96,7 @@ st.sidebar.header("Patient Health Profile")
 age = st.sidebar.slider("Age",20,80,50)
 
 gender_option = st.sidebar.selectbox("Gender",["Female","Male"])
-gender = 1 if gender_option == "Female" else 2
+gender = 1 if gender_option=="Female" else 2
 
 height = st.sidebar.slider("Height (cm)",140,200,170)
 weight = st.sidebar.slider("Weight (kg)",40,150,70)
@@ -152,15 +148,22 @@ if st.button("Predict Cardiovascular Risk"):
 # SHAP EXPLANATION
 # --------------------------
 
-    st.subheader("AI Explanation: What influenced this prediction?")
+    st.subheader("AI Explanation")
 
     shap_values = explainer.shap_values(user_scaled)
-
     shap_contrib = shap_values[0]
+
+    impact_df = pd.DataFrame({
+        "Feature": features,
+        "Impact": shap_contrib
+    }).sort_values(by="Impact")
 
     fig, ax = plt.subplots()
 
-    ax.barh(features, shap_contrib)
+    ax.barh(
+        impact_df["Feature"],
+        impact_df["Impact"]
+    )
 
     ax.set_xlabel("Impact on Prediction")
 
@@ -180,29 +183,29 @@ if st.button("Predict Cardiovascular Risk"):
 
     for feature, value in sorted_features:
 
-        if feature == "smoke" and smoke == 1:
+        if feature=="smoke" and smoke==1:
             suggestions.append("Stop smoking")
             sim[0][7] = 0
 
-        elif feature == "BMI" and BMI > 25:
+        elif feature=="BMI" and BMI>25:
             suggestions.append("Reduce BMI to around 24")
             sim[0][2] = 24
 
-        elif feature == "active" and active == 0:
+        elif feature=="active" and active==0:
             suggestions.append("Increase physical activity")
             sim[0][9] = 1
 
-        elif feature == "cholesterol" and cholesterol > 1:
+        elif feature=="cholesterol" and cholesterol>1:
             suggestions.append("Improve cholesterol through diet")
 
-        elif feature == "alco" and alco == 1:
+        elif feature=="alco" and alco==1:
             suggestions.append("Reduce alcohol consumption")
 
-        if len(suggestions) == 3:
+        if len(suggestions)==3:
             break
 
     for s in suggestions:
-        st.write("•", s)
+        st.write("•",s)
 
     sim_scaled = scaler.transform(sim)
     new_prob = model.predict_proba(sim_scaled)[0][1]
@@ -218,13 +221,13 @@ if st.button("Predict Cardiovascular Risk"):
     G = nx.DiGraph()
 
     edges = [
-        ("Smoking","Heart Disease"),
-        ("Alcohol","Heart Disease"),
-        ("Cholesterol","Heart Disease"),
+        ("Smoking","Blood Pressure"),
         ("Blood Pressure","Heart Disease"),
+        ("Cholesterol","Heart Disease"),
         ("Glucose","Heart Disease"),
-        ("BMI","Blood Pressure"),
-        ("Physical Activity","BMI")
+        ("Alcohol","Heart Disease"),
+        ("Physical Activity","BMI"),
+        ("BMI","Blood Pressure")
     ]
 
     G.add_edges_from(edges)
@@ -239,6 +242,15 @@ if st.button("Predict Cardiovascular Risk"):
         elif node=="Alcohol" and alco==1:
             node_colors.append("orange")
 
+        elif node=="Cholesterol" and cholesterol>1:
+            node_colors.append("red")
+
+        elif node=="Glucose" and gluc>1:
+            node_colors.append("orange")
+
+        elif node=="Blood Pressure" and ap_hi>140:
+            node_colors.append("red")
+
         elif node=="BMI" and BMI>30:
             node_colors.append("orange")
 
@@ -250,13 +262,13 @@ if st.button("Predict Cardiovascular Risk"):
 
     fig2 = plt.figure(figsize=(6,6))
 
-    pos = nx.spring_layout(G, seed=42)
+    pos = nx.kamada_kawai_layout(G)
 
     nx.draw(
         G,
         pos,
         with_labels=True,
-        node_size=2600,
+        node_size=2500,
         node_color=node_colors,
         arrows=True
     )
